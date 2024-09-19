@@ -295,7 +295,7 @@ def test_run():
 
     x_ref = np.array([[0, 0, 0, 0, 0], [10, 10, 0, 0, 0]])
     u_ref = np.zeros((mpc_controller.N, 2))
-    obs = np.array([[5, 5, 1], [8, 3, 1]])
+    obs = np.array([[5, 5, 1]])
 
     # Run with adaptive gamma
     trajectory_adapt, control_inputs_adapt, gamma_values_adapt = mpc_controller.run_until_goal(

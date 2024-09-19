@@ -47,6 +47,13 @@ python robot_mpc_class.py
 
 This will simulate a car-like robot following a predefined trajectory using MPC. The dynamics, cost functions, and constraints can be customized in the script.
 
+### Demo
+[two robots.mp4](doc/vid1.mp4)
+<video src="doc/vid1.mp4" width="320" height="200" controls preload></video>
+
+[two robots exp2.mp4](doc/multi_car_animation.mp4)
+<video src="doc/multi_car_animation.mp4" width="320" height="200" controls preload></video>
+
 ### Customizing the MPC
 
 1. **Dynamics**: Define the system dynamics in CasADi symbolic form in the `mpc_solver.py` file. Modify the state equations to suit your system.
