@@ -1,7 +1,8 @@
 import casadi as ca
+import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Rectangle, Circle
-import matplotlib.pyplot as plt
+
 from Car import Car
 
 
@@ -218,20 +219,29 @@ class MPCController:
 
         return np.array(trajectory), np.array(control_inputs), np.array(gamma_values)
 
-    def plot_results(self, trajectory, control_inputs, gamma_values, x_ref, obs, use_adapt):
-        time = np.arange(len(trajectory)) * self.T
+
+class MPCPlotter:
+    def __init__(self, trajectory, control_inputs, gamma_values, x_ref, obs, T, use_adapt):
+        self.trajectory = trajectory
+        self.control_inputs = control_inputs
+        self.gamma_values = gamma_values
+        self.x_ref = x_ref
+        self.obs = obs
+        self.T = T
+        self.use_adapt = use_adapt
+
+    def plot_results(self):
+        time = np.arange(len(self.trajectory)) * self.T
 
         fig = plt.figure(figsize=(20, 20))
         grid = plt.GridSpec(4, 3, figure=fig)
 
-        # Trajectory plot
         ax_traj = fig.add_subplot(grid[:, 0])
-        ax_traj.plot(trajectory[:, 0], trajectory[:, 1], 'b-', label='Actual Trajectory')
-        ax_traj.plot(x_ref[0, 0], x_ref[0, 1], 'g*', markersize=10, label='Start')
-        ax_traj.plot(x_ref[-1, 0], x_ref[-1, 1], 'r*', markersize=10, label='Goal')
+        ax_traj.plot(self.trajectory[:, 0], self.trajectory[:, 1], 'b-', label='Actual Trajectory')
+        ax_traj.plot(self.x_ref[0, 0], self.x_ref[0, 1], 'g*', markersize=10, label='Start')
+        ax_traj.plot(self.x_ref[-1, 0], self.x_ref[-1, 1], 'r*', markersize=10, label='Goal')
 
-        # Plot obstacles
-        for ob in obs:
+        for ob in self.obs:
             circle = Circle((ob[0], ob[1]), ob[2], fill=True, color='r')
             ax_traj.add_artist(circle)
 
@@ -244,45 +254,45 @@ class MPCController:
 
         # X and Y positions over time
         ax_x = fig.add_subplot(grid[0, 1])
-        ax_x.plot(time, trajectory[:, 0], 'b-')
+        ax_x.plot(time, self.trajectory[:, 0], 'b-')
         ax_x.set_ylabel('X Position (m)')
         ax_x.grid(True)
 
         ax_y = fig.add_subplot(grid[0, 2])
-        ax_y.plot(time, trajectory[:, 1], 'r-')
+        ax_y.plot(time, self.trajectory[:, 1], 'r-')
         ax_y.set_ylabel('Y Position (m)')
         ax_y.grid(True)
 
         # Orientation and velocity over time
         ax_psi = fig.add_subplot(grid[1, 1])
-        ax_psi.plot(time, np.degrees(trajectory[:, 2]), 'g-')
+        ax_psi.plot(time, np.degrees(self.trajectory[:, 2]), 'g-')
         ax_psi.set_ylabel('Orientation (degrees)')
         ax_psi.grid(True)
 
         ax_v = fig.add_subplot(grid[1, 2])
-        ax_v.plot(time, trajectory[:, 3], 'm-')
+        ax_v.plot(time, self.trajectory[:, 3], 'm-')
         ax_v.set_ylabel('Velocity (m/s)')
         ax_v.grid(True)
 
         # Control inputs over time
         ax_a = fig.add_subplot(grid[2, 1])
-        ax_a.plot(time[:-1], control_inputs[:, 0], 'c-')
+        ax_a.plot(time[:-1], self.control_inputs[:, 0], 'c-')
         ax_a.set_ylabel('Acceleration (m/s^2)')
         ax_a.set_xlabel('Time (s)')
         ax_a.grid(True)
 
         ax_omega = fig.add_subplot(grid[2, 2])
-        ax_omega.plot(time[:-1], np.degrees(control_inputs[:, 1]), 'y-')
+        ax_omega.plot(time[:-1], np.degrees(self.control_inputs[:, 1]), 'y-')
         ax_omega.set_ylabel('Steering Rate (degrees/s)')
         ax_omega.set_xlabel('Time (s)')
         ax_omega.grid(True)
 
         # Add gamma plot
         ax_gamma = fig.add_subplot(grid[3, 1:])
-        ax_gamma.plot(time[:-1], gamma_values, 'k-')
+        ax_gamma.plot(time[:-1], self.gamma_values, 'k-')
         ax_gamma.set_ylabel('Gamma')
         ax_gamma.set_xlabel('Time (s)')
-        ax_gamma.set_title('Adaptive Gamma' if use_adapt else 'Constant Gamma')
+        ax_gamma.set_title('Adaptive Gamma' if self.use_adapt else 'Constant Gamma')
         ax_gamma.grid(True)
 
         plt.tight_layout()
@@ -300,55 +310,38 @@ def test_run():
     # Run with adaptive gamma
     trajectory_adapt, control_inputs_adapt, gamma_values_adapt = mpc_controller.run_until_goal(
         x_ref, u_ref, obs, tolerance=0.1, use_cbf=True, use_adapt=True)
-    mpc_controller.plot_results(trajectory_adapt, control_inputs_adapt, gamma_values_adapt, x_ref, obs,
-                                use_adapt=True)
+    MPCPlotter(trajectory_adapt, control_inputs_adapt, gamma_values_adapt, x_ref, obs, mpc_controller.T,
+               use_adapt=True).plot_results()
 
     # Run with constant gamma
     trajectory_const, control_inputs_const, gamma_values_const = mpc_controller.run_until_goal(
         x_ref, u_ref, obs, tolerance=0.1, use_cbf=True, use_adapt=False, default_gamma=0.1)
-    mpc_controller.plot_results(trajectory_const, control_inputs_const, gamma_values_const, x_ref, obs,
-                                use_adapt=False)
+    MPCPlotter(trajectory_const, control_inputs_const, gamma_values_const, x_ref, obs, mpc_controller.T,
+               use_adapt=False).plot_results()
 
-    # Run without CBF
-    no_cbf_success = True
-    try:
-        trajectory_no_cbf, control_inputs_no_cbf, gamma_values_no_cbf = mpc_controller.run_until_goal(
-            x_ref, u_ref, obs, tolerance=0.1, use_cbf=False, use_adapt=False, default_gamma=0.1)
-    except Exception as e:
-        print(f"Run without CBF failed with error: {e}")
-        trajectory_no_cbf = np.array([[x_ref[0, 0], x_ref[0, 1], x_ref[0, 2], x_ref[0, 3], x_ref[0, 4]]])
-        control_inputs_no_cbf = np.array([[0, 0]])
-        gamma_values_no_cbf = np.array([0.1])
-        no_cbf_success = False
+    # Run with no CBF and no adaptive gamma
+    trajectory_no_cbf_adapt, control_inputs_no_cbf_adapt, gamma_values_no_cbf_adapt = mpc_controller.run_until_goal(
+        x_ref, u_ref, obs, tolerance=0.1, use_cbf=False, use_adapt=False, default_gamma=0.1)
+    MPCPlotter(trajectory_no_cbf_adapt, control_inputs_no_cbf_adapt, gamma_values_no_cbf_adapt, x_ref, obs,
+               mpc_controller.T, use_adapt=False).plot_results()
 
-    # Plot results for no CBF case, even if it failed
-    if no_cbf_success:
-        mpc_controller.plot_results(trajectory_no_cbf, control_inputs_no_cbf, gamma_values_no_cbf, x_ref, obs,
-                                    use_adapt=False)
-    else:
-        print("Skipping detailed plot for failed No CBF run")
-
-    # Compare trajectories
+    # Compare all trajectories
     plt.figure(figsize=(12, 8))
     plt.plot(trajectory_adapt[:, 0], trajectory_adapt[:, 1], 'b-', label='Adaptive Gamma')
     plt.plot(trajectory_const[:, 0], trajectory_const[:, 1], 'r--', label='Constant Gamma')
-    if no_cbf_success:
-        plt.plot(trajectory_no_cbf[:, 0], trajectory_no_cbf[:, 1], 'g-.', label='No CBF')
-    else:
-        plt.plot(trajectory_no_cbf[0, 0], trajectory_no_cbf[0, 1], 'gx', markersize=10, label='No CBF (Failed)')
+    plt.plot(trajectory_no_cbf_adapt[:, 0], trajectory_no_cbf_adapt[:, 1], 'g-.', label='No CBF & No Adaptive Gamma')
+
     plt.plot(x_ref[0, 0], x_ref[0, 1], 'g*', markersize=10, label='Start')
     plt.plot(x_ref[-1, 0], x_ref[-1, 1], 'ro', markersize=10, label='Goal')
 
     # Plot obstacle
-    #obstacle = plt.Circle((obs[0, 0], obs[0, 1]), obs[0, 2], color='gray', fill=True, alpha=0.3)
-    #plt.gca().add_artist(obstacle)
     for ob in obs:
         circle = plt.Circle((ob[0], ob[1]), ob[2], color='gray', fill=True, alpha=0.3)
         plt.gca().add_artist(circle)
 
     plt.xlabel('X Position (m)')
     plt.ylabel('Y Position (m)')
-    plt.title('Comparison of Trajectories: Adaptive Gamma vs Constant Gamma vs No CBF')
+    plt.title('Comparison of Trajectories: Adaptive Gamma vs Constant Gamma vs No CBF & No Adaptive Gamma')
     plt.legend()
     plt.grid(True)
     plt.axis('equal')
