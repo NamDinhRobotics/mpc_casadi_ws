@@ -186,8 +186,6 @@ class MPCController:
             if use_adapt:
                 # Calculate distance to obstacle and goal
                 dist_to_obs = np.min([np.linalg.norm(current_state[:2] - ob[:2]) - ob[2] for ob in obs])
-
-                # linearly decrease gamma as the robot gets closer to the obstacle
                 gamma_dis = default_gamma * (1 - dist_to_obs / 15)
                 print(f"Distance to obstacle: {dist_to_obs}, gamma: {gamma_dis}")
 
@@ -309,19 +307,19 @@ def test_run():
 
     # Run with adaptive gamma
     trajectory_adapt, control_inputs_adapt, gamma_values_adapt = mpc_controller.run_until_goal(
-        x_ref, u_ref, obs, tolerance=0.1, use_cbf=True, use_adapt=True)
+        x_ref, u_ref, obs, tolerance=0.1, use_cbf=True, use_adapt=True, default_gamma=0.2)
     MPCPlotter(trajectory_adapt, control_inputs_adapt, gamma_values_adapt, x_ref, obs, mpc_controller.T,
                use_adapt=True).plot_results()
 
     # Run with constant gamma
     trajectory_const, control_inputs_const, gamma_values_const = mpc_controller.run_until_goal(
-        x_ref, u_ref, obs, tolerance=0.1, use_cbf=True, use_adapt=False, default_gamma=0.1)
+        x_ref, u_ref, obs, tolerance=0.1, use_cbf=True, use_adapt=False, default_gamma=0.2)
     MPCPlotter(trajectory_const, control_inputs_const, gamma_values_const, x_ref, obs, mpc_controller.T,
                use_adapt=False).plot_results()
 
     # Run with no CBF and no adaptive gamma
     trajectory_no_cbf_adapt, control_inputs_no_cbf_adapt, gamma_values_no_cbf_adapt = mpc_controller.run_until_goal(
-        x_ref, u_ref, obs, tolerance=0.1, use_cbf=False, use_adapt=False, default_gamma=0.1)
+        x_ref, u_ref, obs, tolerance=0.1, use_cbf=False, use_adapt=False, default_gamma=0.2)
     MPCPlotter(trajectory_no_cbf_adapt, control_inputs_no_cbf_adapt, gamma_values_no_cbf_adapt, x_ref, obs,
                mpc_controller.T, use_adapt=False).plot_results()
 
